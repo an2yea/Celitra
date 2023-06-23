@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import { Engagement, Inter } from 'next/font/google'
 import styles from '@/styles/Home.module.css'
 import { ParticleNetwork, WalletEntryPosition } from "@particle-network/auth";
 import {ethers, Contract} from 'ethers'
@@ -13,7 +13,9 @@ import {AppBar, Toolbar, Typography, Stack, Box, Tooltip, Button, Backdrop, Circ
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { MainGrid } from '@/Components/MainGrid';
+// import { Game } from '@/Components/Game';
 const inter = Inter({ subsets: ['latin'] })
+
 
 export default function Home() {
 
@@ -92,6 +94,8 @@ export default function Home() {
   }
 
   const initialiseSmartAccount = async() => {
+    const particleProvider = new ParticleProvider(particle.auth);
+    const provider = new ethers.providers.Web3Provider(particleProvider, "any");
     let smartAccount = await new SmartAccount(provider, {
       projectId: PARTICLE_PROJECT_ID,
       clientKey: PARTICLE_CLIENT_KEY,
@@ -122,13 +126,12 @@ export default function Home() {
     const accounts = await provider.listAccounts();
     console.log(accounts[0]);
     setWalletAddress(accounts[0]);
+    initialiseSmartAccount();
   }
 
   const openWallet = () => {
     particle.openWallet();
   }
-
-
 
   const renderConnectWallet = () => {
     if(walletConnected) {
@@ -142,6 +145,7 @@ export default function Home() {
     }
     else return<Button style={{backgroundColor:"white", color:"#45A29E"}} variant="contained" color="inherit" size="medium" onClick={login}> Login </Button>
   }
+
 
   return (
     <>
@@ -164,6 +168,7 @@ export default function Home() {
         </Toolbar>
       </AppBar>
       <Grid container flexDirection='column' alignItems='center' spacing={4} paddingLeft='2%' paddingRight='2%' >
+      {/* <Game /> */}
       <MainGrid walletAddress={walletAddress}/>
       {/* <Backdrop
         sx={{ color: '#45A29E', zIndex: (theme) => theme.zIndex.drawer + 1 }}

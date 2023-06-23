@@ -1,3 +1,7 @@
+export const TIME_LIMIT=30000;
+export const MOLE_SCORE = 100;
+
+
 export const PARTICLE_PROJECT_ID="1854b250-df82-4805-a1cc-1f7701c782a0"
 export const PARTICLE_APP_ID="802a8c74-940c-418d-b027-7d1eb9b6b32a"
 export const PARTICLE_CLIENT_KEY="cDTUsP8LOC3CeOLH98FRvNrxkgNyYt6GWb0kcuSg"
