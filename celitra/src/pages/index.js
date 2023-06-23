@@ -3,28 +3,39 @@ import Image from 'next/image'
 import { Inter } from 'next/font/google'
 import styles from '@/styles/Home.module.css'
 import { ParticleNetwork, WalletEntryPosition } from "@particle-network/auth";
+import {ethers, Contract} from 'ethers'
 import { ParticleProvider } from "@particle-network/provider";
 import Web3 from "web3";
 import { useState } from 'react';
-
+import { SmartAccount } from '@particle-network/biconomy';
+import {CONTRACT_ADDRESS, CONTRACT_ABI, PARTICLE_PROJECT_ID, PARTICLE_CLIENT_KEY, PARTICLE_APP_ID, BICONOMY_API_KEY} from "../constants/index"
+import {AppBar, Toolbar, Typography, Stack, Box, Tooltip, Button, Backdrop, CircularProgress, Slide, Grid, Card} from "@mui/material"
+import FileCopyIcon from '@mui/icons-material/FileCopy';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { MainGrid } from '@/Components/MainGrid';
 const inter = Inter({ subsets: ['latin'] })
 
 export default function Home() {
 
    const [walletConnected, setWalletConnected] = useState(false);
    const [walletAddress, setWalletAddress] = useState("");
+   const [smartAccountAddress, setSmartAccountAddress] = useState("");
+   const [smartAccount, setSmartAccount] = useState("");
+   const [provider, setProvider] = useState();
+   const isLargerThan600 = useMediaQuery('(min-width: 600px)')
+
 
    const particle = new ParticleNetwork({
-    projectId: "1854b250-df82-4805-a1cc-1f7701c782a0",
-    clientKey: "cDTUsP8LOC3CeOLH98FRvNrxkgNyYt6GWb0kcuSg",
-    appId: "802a8c74-940c-418d-b027-7d1eb9b6b32a",
-    chainName: "Ethereum", //optional: current chain name, default Ethereum.
-    chainId: 1, //optional: current chain id, default 1.
-    wallet: {   //optional: by default, the wallet entry is displayed in the bottom right corner of the webpage.
-      displayWalletEntry: true,  //show wallet entry when connect particle.
-      defaultWalletEntryPosition: WalletEntryPosition.BR, //wallet entry position
-      uiMode: "dark",  //optional: light or dark, if not set, the default is the same as web auth.
-      supportChains: [{ id: 1, name: "Ethereum"}, { id: 5, name: "Ethereum"}, {id:137, name:"Polygon"}, {id:80001, name:"Polygon"}], // optional: web wallet support chains.
+    projectId: PARTICLE_PROJECT_ID,
+    clientKey: PARTICLE_CLIENT_KEY,
+    appId: PARTICLE_APP_ID,
+    chainName: "Polygon",
+    chainId: 80001, 
+    wallet: {   
+      displayWalletEntry: true, 
+      defaultWalletEntryPosition: WalletEntryPosition.BR, 
+      uiMode: "dark",  
+      supportChains: [{id:80001, name:"Polygon"}], 
       customStyle: {}, 
     },
     securityAccount: { 
@@ -33,18 +44,82 @@ export default function Home() {
     },
   });
 
+  const mintNFT = async() => {
+    let tokenURI = `ipfs://bafyreidrt5utdvnwonctnojcese7n2lzi4pkcvvtz7mw2ptijbtnb5sfya/metadata.json`;
+    const particleProvider = new ParticleProvider(particle.auth);
+
+    const ethersProvider = new ethers.providers.Web3Provider(particleProvider, "any");
+    const signer = ethersProvider.getSigner();
+
+    const msg = [
+    {
+      type: "string",
+      name: "fullName",
+      value: "John Doe",
+    },
+    {
+      type: "uint32",
+      name: "userId",
+      value: "1234",
+    },
+  ];
+
+    const message = '0x.......';
+    const result = await particle.evm.personalSignUniq(message);
+    console.log(result);
+    // const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+    // const tx = contract.mintNFT({
+    //   to: walletAddress,
+    //   tokenURI: tokenURI,
+    //   value: utils.parseEther(0.001)
+    // })
+
+    // await tx.wait();
+    // window.alert("The NFT was succesfully minted");
+    // let iface = new ethers.utils.Interface(CONTRACT_ABI);
+    // let x = iface.encodeFunctionData("mintNFT", [walletAddress, tokenURI]);
+    // console.log(x);
+
+    // const tx = {
+    //   from;  
+    //   target: walletAddress, 
+    //   data: x
+    // }
+
+    // const txnHash = await particle.evm.sendTransaction(tx);
+    // console.log(txnHash);
+  }
+
+  const initialiseSmartAccount = async() => {
+    let smartAccount = await new SmartAccount(provider, {
+      projectId: PARTICLE_PROJECT_ID,
+      clientKey: PARTICLE_CLIENT_KEY,
+      appId: PARTICLE_APP_ID,
+      networkConfig: [
+          { dappAPIKey: BICONOMY_API_KEY, chainId: 80001 },
+      ],
+    });
+    console.log(smartAccount);
+
+    smartAccount = await smartAccount.init();
+    // console.log(Object.getPrototypeOf(smartAccount)); 
+    // await smartAccount.init();
+    // setSmartAccount(smartAccount);
+    // const address = smartAccount.getAddress();
+    // setSmartAccountAddress(address);
+  }
   const login = async () => {
     
     const particleProvider = new ParticleProvider(particle.auth);
-  
-    window.web3 = new Web3(particleProvider);
-    window.web3.currentProvider.isParticleNetwork
-
+    const provider = new ethers.providers.Web3Provider(particleProvider, "any");
+    console.log(provider);
+    setProvider(provider);
     const userInfo = await particle.auth.login();
     console.log(userInfo);
     setWalletConnected(true);
 
-    const accounts = await web3.eth.getAccounts();
+    const accounts = await provider.listAccounts();
     console.log(accounts[0]);
     setWalletAddress(accounts[0]);
   }
@@ -53,30 +128,49 @@ export default function Home() {
     particle.openWallet();
   }
 
+
+
   const renderConnectWallet = () => {
     if(walletConnected) {
-      return <button onClick={openWallet}> Open wallet </button>
+      return <Button variant="link" style={{backgroundColor:"white", color:"#45A29E"}}color="inherit" id="account-button" size="medium"> 
+        <p aria-controls="open ? 'account-menu' : undefined" aria-haspopup="true" aria-expanded={open ? 'true':undefined}>{walletAddress} 
+        </p> &nbsp; 
+        <Tooltip title="Click to Copy wallet address">
+        <FileCopyIcon onClick={()=>{
+          navigator.clipboard.writeText(`${walletAddress}`);
+    }}/></Tooltip> </Button>
     }
-    else return <button onClick={login}> Log In </button>
+    else return<Button style={{backgroundColor:"white", color:"#45A29E"}} variant="contained" color="inherit" size="medium" onClick={login}> Login </Button>
   }
 
   return (
     <>
       <Head>
-        <title>Create Next App</title>
-        <meta name="description" content="Generated by create next app" />
+        <title> Celitra </title>
+        <meta name="description" content="Get into the Web3 Ecosystem with a single click! " />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/images/white_favicon.svg" />
       </Head>
-      <main className={styles.main}>
-        <div className={styles.description}>
-          <p>
-            Get started by editing&nbsp;
-            <code className={styles.code}>src/pages/index.js</code>
-          </p>
-          {renderConnectWallet()};
-        </div>
-        </main>
+      <Box sx={{mt:3, flexDirection: 'row', justifyContent:'center', alignItems:'center'}}>
+      <AppBar sx={{boxShadow:0}} position="sticky" style={{backgroundColor:"transparent"}}>
+        <Toolbar sx={{ml:'2%', padding:'0', justifyContent:'space-around'}} variant="dense" >
+          <Image src='/images/white_icon.svg' alt='Logo' height='70' width='50'/>
+          {isLargerThan600 && <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
+            &nbsp; Celitra
+        </Typography>}
+        <Stack direction='row' spacing={2}>
+          {renderConnectWallet()}
+        </Stack>
+        </Toolbar>
+      </AppBar>
+      <Grid container flexDirection='column' alignItems='center' spacing={4} paddingLeft='2%' paddingRight='2%' >
+      <MainGrid walletAddress={walletAddress}/>
+      {/* <Backdrop
+        sx={{ color: '#45A29E', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}>
+        <CircularProgress color="inherit" /></Backdrop> */}
+      </Grid >
+      </Box>
     </>
   )
 }
